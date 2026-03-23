@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mx-auto max-w-6xl">
+    <div class="mb-5">
+        <h2 class="text-2xl font-bold text-slate-900">Search</h2>
+        <p class="text-sm text-slate-600">
+            {% if query %}Showing results for <span class="font-semibold">{{ query }}</span>.{% else %}Type a keyword in the navbar search.{% endif %}
+        </p>
+    </div>
+
+    {% if query %}
+        <div class="space-y-5">
+            <div class="rounded-2xl bg-white p-5 shadow-lg">
+                <h3 class="mb-3 text-lg font-bold text-slate-900">Students</h3>
+                {% if students %}
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-slate-100 text-slate-700">
+                                <tr>
+                                    <th class="px-4 py-3 text-left">Name</th>
+                                    <th class="px-4 py-3 text-left">Email</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in students %}
+                                    <tr class="border-b odd:bg-white even:bg-slate-50">
+                                        <td class="px-4 py-3 font-medium text-slate-800">
+                                            {{ s.get_full_name|default:s.username }}
+                                            <span class="ml-2 text-xs font-bold text-slate-500">({{ s.username }})</span>
+                                        </td>
+                                        <td class="px-4 py-3">{{ s.email|default:"-" }}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="2" class="px-4 py-8 text-center text-slate-500">No matching students.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-slate-500">No matching students.</div>
+                {% endif %}
+            </div>
+
+            <div class="rounded-2xl bg-white p-5 shadow-lg">
+                <h3 class="mb-3 text-lg font-bold text-slate-900">Supervisors</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-slate-100 text-slate-700">
+                            <tr>
+                                <th class="px-4 py-3 text-left">Name</th>
+                                <th class="px-4 py-3 text-left">Email</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sup in supervisors %}
+                                <tr class="border-b odd:bg-white even:bg-slate-50">
+                                    <td class="px-4 py-3 font-medium text-slate-800">
+                                        {{ sup.get_full_name|default:sup.username }}
+                                        <span class="ml-2 text-xs font-bold text-slate-500">({{ sup.username }})</span>
+                                    </td>
+                                    <td class="px-4 py-3">{{ sup.email|default:"-" }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="2" class="px-4 py-8 text-center text-slate-500">No matching supervisors.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="rounded-2xl bg-white p-5 shadow-lg">
+                <h3 class="mb-3 text-lg font-bold text-slate-900">Projects</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-slate-100 text-slate-700">
+                            <tr>
+                                <th class="px-4 py-3 text-left">Title</th>
+                                <th class="px-4 py-3 text-left">Student</th>
+                                <th class="px-4 py-3 text-left">Last Updated</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in projects %}
+                                <tr class="border-b odd:bg-white even:bg-slate-50">
+                                    <td class="px-4 py-3 font-medium text-slate-800">{{ p.title }}</td>
+                                    <td class="px-4 py-3">{{ p.student.username }}</td>
+                                    <td class="px-4 py-3">{{ p.updated_at }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="3" class="px-4 py-8 text-center text-slate-500">No matching projects.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="rounded-2xl bg-white p-8 text-center shadow-lg">
+            <p class="text-slate-700">Use the search bar in the navbar to find students, supervisors, and projects.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FYP Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            500: "#6366f1",
+                            600: "#4f46e5",
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .page-fade { animation: fadeIn 0.35s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: translateY(0);} }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+    <div id="loadingOverlay" class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm">
+        <div class="h-12 w-12 animate-spin rounded-full border-4 border-white/30 border-t-white"></div>
+    </div>
+
+    {% if user.is_authenticated %}
+        <div class="min-h-screen lg:flex">
+            {% include "partials/sidebar.html" %}
+            <div class="flex-1">
+                {% include "partials/navbar.html" %}
+                <main class="page-fade p-4 sm:p-6 lg:p-8">
+                    {% include "partials/alerts.html" %}
+    {% else %}
+        <main class="page-fade min-h-screen bg-gradient-to-br from-blue-100 via-indigo-100 to-purple-100 p-4 sm:p-8">
+            {% include "partials/alerts.html" %}
+    {% endif %}
+
+    {% block content %}{% endblock %}
+
+    {% if user.is_authenticated %}
+                </main>
+            </div>
+        </div>
+    {% else %}
+        </main>
+    {% endif %}
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById("mobileSidebar");
+            if (sidebar) sidebar.classList.toggle("hidden");
+        }
+        document.querySelectorAll("form").forEach((form) => {
+            form.addEventListener("submit", () => {
+                const overlay = document.getElementById("loadingOverlay");
+                if (overlay) overlay.classList.remove("hidden");
+                if (overlay) overlay.classList.add("flex");
+            });
+        });
+    </script>
+</body>
+</html>

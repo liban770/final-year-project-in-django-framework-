@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-slate-900">Dashboard Overview</h2>
+    <p class="text-sm text-slate-600">Track projects, submissions, and progress in one place.</p>
+</div>
+
+<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    {% if user.role == "ADMIN" %}
+        <div class="rounded-2xl bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 p-5 text-white shadow-lg transition-all duration-300 hover:scale-105"><p class="text-sm">Students</p><p class="text-3xl font-bold">{{ total_students }}</p></div>
+        <div class="rounded-2xl bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 p-5 text-white shadow-lg transition-all duration-300 hover:scale-105"><p class="text-sm">Supervisors</p><p class="text-3xl font-bold">{{ total_supervisors }}</p></div>
+        <div class="rounded-2xl bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 p-5 text-white shadow-lg transition-all duration-300 hover:scale-105"><p class="text-sm">Projects</p><p class="text-3xl font-bold">{{ total_projects }}</p></div>
+    {% elif user.role == "SUPERVISOR" %}
+        <div class="rounded-2xl bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 p-5 text-white shadow-lg transition-all duration-300 hover:scale-105"><p class="text-sm">Assigned Students</p><p class="text-3xl font-bold">{{ assigned_students|length }}</p></div>
+        <div class="rounded-2xl bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 p-5 text-white shadow-lg transition-all duration-300 hover:scale-105"><p class="text-sm">Total Chapters</p><p class="text-3xl font-bold">{{ chapter_count }}</p></div>
+        <div class="rounded-2xl bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 p-5 text-white shadow-lg transition-all duration-300 hover:scale-105"><p class="text-sm">Pending Reviews</p><p class="text-3xl font-bold">{{ pending_reviews }}</p></div>
+    {% else %}
+        <div class="rounded-2xl bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 p-5 text-white shadow-lg transition-all duration-300 hover:scale-105"><p class="text-sm">Pending</p><p class="text-3xl font-bold">{{ pending }}</p></div>
+        <div class="rounded-2xl bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 p-5 text-white shadow-lg transition-all duration-300 hover:scale-105"><p class="text-sm">Reviewed</p><p class="text-3xl font-bold">{{ reviewed }}</p></div>
+        <div class="rounded-2xl bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 p-5 text-white shadow-lg transition-all duration-300 hover:scale-105"><p class="text-sm">Approved</p><p class="text-3xl font-bold">{{ approved }}</p></div>
+    {% endif %}
+</div>
+
+<div class="mt-6 grid gap-6 lg:grid-cols-3">
+    <div class="rounded-2xl bg-white p-5 shadow-lg lg:col-span-2">
+        <h3 class="mb-3 text-lg font-semibold">Highlights</h3>
+        {% if user.role == "ADMIN" %}
+            <ul class="space-y-2 text-sm text-slate-700">
+                {% for project in recent_projects %}
+                    <li class="rounded-lg bg-slate-50 px-3 py-2">{{ project.title }} - {{ project.student.username }}</li>
+                {% empty %}
+                    <li class="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-center text-slate-500">No recent projects yet.</li>
+                {% endfor %}
+            </ul>
+        {% elif user.role == "STUDENT" and project %}
+            <p class="text-sm text-slate-600">Current project: <span class="font-semibold text-slate-800">{{ project.title }}</span></p>
+        {% else %}
+            <p class="text-sm text-slate-600">Use the sidebar to continue your workflow.</p>
+        {% endif %}
+    </div>
+    <div id="notifications" class="rounded-2xl bg-white p-5 shadow-lg">
+        <div class="mb-3 flex items-center justify-between gap-3">
+            <h3 class="text-lg font-semibold">Notifications</h3>
+            {% if user.role == "STUDENT" %}
+                <form method="post" action="{% url 'users:notification-clear' %}" class="hidden" id="clear-all-form">
+                    {% csrf_token %}
+                </form>
+                <button
+                    type="button"
+                    onclick="openClearAllModal()"
+                    class="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
+                >
+                    Clear all
+                </button>
+            {% endif %}
+        </div>
+
+        <div class="space-y-3 text-sm">
+            {% if user.role == "STUDENT" %}
+                {% for note in notifications %}
+                    <div class="rounded-xl border border-slate-200 bg-white p-3">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <p class="font-medium text-slate-800">
+                                    {{ note.message }}
+                                </p>
+                                <p class="mt-1 text-xs text-slate-500">{{ note.created_at }}</p>
+                                {% if not note.is_read %}
+                                    <span class="mt-2 inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-bold text-indigo-700">Unread</span>
+                                {% endif %}
+                            </div>
+
+                            {% if user.role == "STUDENT" %}
+                                <div class="flex items-center gap-2">
+                                    {% if not note.is_read %}
+                                        <form method="post" action="{% url 'users:notification-read' note.pk %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="rounded-lg bg-indigo-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-indigo-700">
+                                                Mark read
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                    <button
+                                        type="button"
+                                        class="rounded-lg bg-rose-50 px-2.5 py-1.5 text-xs font-bold text-rose-700 transition hover:bg-rose-100"
+                                        onclick="openDeleteModal('{{ note.pk }}')"
+                                    >
+                                        Delete
+                                    </button>
+
+                                    <form
+                                        method="post"
+                                        action="{% url 'users:notification-delete' note.pk %}"
+                                        id="delete-notification-form-{{ note.pk }}"
+                                        class="hidden"
+                                    >
+                                        {% csrf_token %}
+                                        <input type="hidden" name="confirm" value="yes" />
+                                    </form>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-center text-slate-500">
+                        No notifications yet.
+                    </div>
+                {% endfor %}
+            {% else %}
+                {% for note in unread_notifications %}
+                    <div class="rounded-lg bg-indigo-50 px-3 py-2 text-indigo-700">
+                        {{ note.message }}
+                    </div>
+                {% empty %}
+                    <div class="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-center text-slate-500">
+                        No notifications yet.
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if user.role == "STUDENT" %}
+    <div id="deleteNotificationModal" class="fixed inset-0 z-[200] hidden items-center justify-center bg-slate-900/40 px-4">
+        <div class="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
+            <h4 class="text-lg font-bold text-slate-900">Delete notification?</h4>
+            <p class="mt-1 text-sm text-slate-600">This action cannot be undone.</p>
+            <div class="mt-4 flex justify-end gap-2">
+                <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" onclick="closeDeleteModal()">
+                    Cancel
+                </button>
+                <button type="button" class="rounded-lg bg-rose-600 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-700" onclick="confirmDeleteNotification()">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="clearAllModal" class="fixed inset-0 z-[200] hidden items-center justify-center bg-slate-900/40 px-4">
+        <div class="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
+            <h4 class="text-lg font-bold text-slate-900">Clear all notifications?</h4>
+            <p class="mt-1 text-sm text-slate-600">This will remove all notifications from your account.</p>
+            <div class="mt-4 flex justify-end gap-2">
+                <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" onclick="closeClearAllModal()">
+                    Cancel
+                </button>
+                <form method="post" action="{% url 'users:notification-clear' %}" class="inline" id="clear-all-post-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="confirm" value="yes" />
+                    <button type="submit" class="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                        Clear all
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openDeleteModal(notificationId) {
+            const modal = document.getElementById("deleteNotificationModal");
+            modal.dataset.formId = "delete-notification-form-" + notificationId;
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        }
+        function closeDeleteModal() {
+            const modal = document.getElementById("deleteNotificationModal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+        function confirmDeleteNotification() {
+            const modal = document.getElementById("deleteNotificationModal");
+            const formId = modal.dataset.formId;
+            const form = document.getElementById(formId);
+            if (form) form.submit();
+        }
+        function openClearAllModal() {
+            const modal = document.getElementById("clearAllModal");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        }
+        function closeClearAllModal() {
+            const modal = document.getElementById("clearAllModal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+    </script>
+{% endif %}
+{% endblock %}

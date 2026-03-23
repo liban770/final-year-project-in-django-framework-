@@ -1,0 +1,51 @@
+<aside class="hidden w-72 border-r border-slate-200 bg-white lg:block">
+    <div class="flex h-full flex-col">
+        <div class="border-b border-slate-200 p-6">
+            <a href="{% url 'users:dashboard' %}" class="text-xl font-bold text-indigo-700">FYPMS</a>
+        </div>
+        <nav class="flex-1 space-y-1 p-4 text-sm">
+            <a href="{% url 'users:dashboard' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-700">Dashboard</a>
+            {% if user.role == "ADMIN" %}
+                <a href="{% url 'users:user-list' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-700">User Management</a>
+                <a href="{% url 'projects:assign-supervisor' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-700">Assign Supervisor</a>
+                <a href="{% url 'projects:project-list' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-700">All Projects</a>
+                <a href="{% url 'projects:reports' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-700">Reports</a>
+            {% elif user.role == "SUPERVISOR" %}
+                <a href="{% url 'projects:supervisor-students' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-700">Assigned Students</a>
+                <a href="{% url 'projects:supervisor-chapters' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-700">Review Chapters</a>
+                <a href="{% url 'projects:reports' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-700">Reports</a>
+            {% else %}
+                <a href="{% url 'projects:student-project' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-700">Project Submission</a>
+                <a href="{% url 'projects:student-chapters' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-700">Chapter Uploads</a>
+                <a href="{% url 'projects:student-feedbacks' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-700">Feedback</a>
+            {% endif %}
+        </nav>
+    </div>
+</aside>
+
+<aside id="mobileSidebar" class="fixed inset-0 z-40 hidden lg:hidden">
+    <div class="absolute inset-0 bg-slate-900/50" onclick="toggleSidebar()"></div>
+    <div class="relative h-full w-72 bg-white p-4 shadow-2xl">
+        <div class="mb-4 flex items-center justify-between border-b border-slate-200 pb-3">
+            <a href="{% url 'users:dashboard' %}" class="text-lg font-bold text-indigo-700">FYPMS</a>
+            <button type="button" onclick="toggleSidebar()" class="rounded-lg border border-slate-300 p-2">x</button>
+        </div>
+        <nav class="space-y-1 text-sm">
+            <a href="{% url 'users:dashboard' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">Dashboard</a>
+            {% if user.role == "ADMIN" %}
+                <a href="{% url 'users:user-list' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">User Management</a>
+                <a href="{% url 'projects:assign-supervisor' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">Assign Supervisor</a>
+                <a href="{% url 'projects:project-list' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">All Projects</a>
+                <a href="{% url 'projects:reports' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">Reports</a>
+            {% elif user.role == "SUPERVISOR" %}
+                <a href="{% url 'projects:supervisor-students' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">Assigned Students</a>
+                <a href="{% url 'projects:supervisor-chapters' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">Review Chapters</a>
+                <a href="{% url 'projects:reports' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">Reports</a>
+            {% else %}
+                <a href="{% url 'projects:student-project' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">Project Submission</a>
+                <a href="{% url 'projects:student-chapters' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">Chapter Uploads</a>
+                <a href="{% url 'projects:student-feedbacks' %}" class="block rounded-xl px-3 py-2 font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">Feedback</a>
+            {% endif %}
+        </nav>
+    </div>
+</aside>

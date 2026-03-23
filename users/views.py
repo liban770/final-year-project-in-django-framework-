@@ -1,0 +1,146 @@
+from django.contrib import messages
+from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse_lazy
+from django.views import View
+from django.views.generic import CreateView, TemplateView, UpdateView
+
+from projects.models import Chapter, Notification, Project, SupervisorAssignment
+
+from .forms import AppUserCreationForm, AppUserUpdateForm
+from .mixins import AdminRequiredMixin, StudentRequiredMixin
+from .models import User
+
+
+class UserLoginView(LoginView):
+    template_name = "users/login.html"
+    redirect_authenticated_user = True
+
+
+class UserLogoutView(LogoutView):
+    pass
+
+
+class DashboardView(LoginRequiredMixin, TemplateView):
+    template_name = "users/dashboard.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+
+        if user.role == User.Role.ADMIN:
+            context.update(
+                {
+                    "total_students": User.objects.filter(role=User.Role.STUDENT).count(),
+                    "total_supervisors": User.objects.filter(role=User.Role.SUPERVISOR).count(),
+                    "total_projects": Project.objects.count(),
+                    "recent_projects": Project.objects.select_related("student").order_by("-updated_at")[:5],
+                }
+            )
+        elif user.role == User.Role.SUPERVISOR:
+            assignments = SupervisorAssignment.objects.filter(supervisor=user).select_related("student")
+            student_ids = assignments.values_list("student_id", flat=True)
+            chapters = Chapter.objects.filter(project__student_id__in=student_ids).select_related(
+                "project", "project__student"
+            )
+            context.update(
+                {
+                    "assigned_students": assignments,
+                    "chapter_count": chapters.count(),
+                    "pending_reviews": chapters.filter(status=Chapter.Status.PENDING).count(),
+                }
+            )
+        else:
+            project = Project.objects.filter(student=user).first()
+            chapters = Chapter.objects.filter(project=project) if project else Chapter.objects.none()
+            context.update(
+                {
+                    "project": project,
+                    "chapters": chapters.order_by("-submission_date"),
+                    "pending": chapters.filter(status=Chapter.Status.PENDING).count(),
+                    "reviewed": chapters.filter(status=Chapter.Status.REVIEWED).count(),
+                    "approved": chapters.filter(status=Chapter.Status.APPROVED).count(),
+                }
+            )
+
+        context["unread_notifications"] = user.notifications.filter(is_read=False)[:8]
+        context["notifications"] = user.notifications.all()[:20]
+        return context
+
+
+class UserCreateView(AdminRequiredMixin, CreateView):
+    template_name = "users/create_user.html"
+    form_class = AppUserCreationForm
+    success_url = reverse_lazy("users:user-list")
+
+
+class AdminUserListView(AdminRequiredMixin, TemplateView):
+    template_name = "users/user_list.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["users"] = User.objects.order_by("role", "username")
+        return context
+
+
+class AdminUserUpdateView(AdminRequiredMixin, UpdateView):
+    model = User
+    template_name = "users/user_edit.html"
+    form_class = AppUserUpdateForm
+    success_url = reverse_lazy("users:user-list")
+
+    def get_queryset(self):
+        # Admin can edit any user except themselves deletion is handled separately.
+        return User.objects.all()
+
+
+class AdminUserDeleteView(AdminRequiredMixin, View):
+    def post(self, request, pk, *args, **kwargs):
+        if request.POST.get("confirm") != "yes":
+            messages.error(request, "Deletion confirmation missing.")
+            return redirect("users:user-list")
+        user_to_delete = get_object_or_404(User, pk=pk)
+        if user_to_delete == request.user:
+            messages.error(request, "You cannot delete your own account.")
+            return redirect("users:user-list")
+
+        user_to_delete.delete()
+        messages.success(request, "User deleted successfully.")
+        return redirect("users:user-list")
+
+
+class NotificationMarkReadView(StudentRequiredMixin, View):
+    def post(self, request, pk, *args, **kwargs):
+        notification = get_object_or_404(Notification, pk=pk, user=request.user)
+        if not notification.is_read:
+            notification.is_read = True
+            notification.save(update_fields=["is_read"])
+        return redirect("users:dashboard")
+
+
+class NotificationDeleteView(StudentRequiredMixin, View):
+    def post(self, request, pk, *args, **kwargs):
+        if request.POST.get("confirm") != "yes":
+            messages.error(request, "Deletion confirmation missing.")
+            return redirect("users:dashboard")
+        notification = get_object_or_404(Notification, pk=pk, user=request.user)
+        notification.delete()
+        messages.success(request, "Notification deleted.")
+        return redirect("users:dashboard")
+
+
+class NotificationClearAllView(StudentRequiredMixin, View):
+    def post(self, request, *args, **kwargs):
+        if request.POST.get("confirm") != "yes":
+            messages.error(request, "Deletion confirmation missing.")
+            return redirect("users:dashboard")
+        Notification.objects.filter(user=request.user).delete()
+        messages.success(request, "All notifications cleared.")
+        return redirect("users:dashboard")
+
+
+def role_redirect_view(request):
+    if not request.user.is_authenticated:
+        return redirect("users:login")
+    return redirect("users:dashboard")

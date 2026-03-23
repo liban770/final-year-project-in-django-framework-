@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mx-auto max-w-4xl rounded-2xl bg-white p-6 shadow-lg">
+    <h2 class="mb-1 text-2xl font-bold">Feedback for {{ chapter.title }}</h2>
+    <p class="mb-6 text-sm text-slate-600">Add comments and update chapter status.</p>
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div>
+            <label class="mb-1 block text-sm font-medium text-slate-700">Status</label>
+            <select name="status" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+                <option value="REVIEWED">Reviewed</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+            </select>
+        </div>
+        <button type="submit" class="rounded-lg bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 px-5 py-2 text-sm font-medium text-white shadow-lg transition-all duration-300 hover:scale-105">Save Feedback</button>
+    </form>
+</div>
+<style>
+    form p { margin-bottom: 14px; }
+    form textarea {
+        width: 100%;
+        min-height: 130px;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.5rem;
+        padding: 0.55rem 0.75rem;
+        margin-top: 0.25rem;
+    }
+    form textarea:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px #6366f1;
+    }
+</style>
+{% endblock %}

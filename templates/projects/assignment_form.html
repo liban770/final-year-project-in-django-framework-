@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mx-auto max-w-3xl rounded-2xl bg-white p-6 shadow-lg">
+    <h2 class="mb-1 text-2xl font-bold">Assign Supervisor</h2>
+    <p class="mb-6 text-sm text-slate-600">Link each student to a supervisor.</p>
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="rounded-lg bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 px-5 py-2 text-sm font-medium text-white shadow-lg transition-all duration-300 hover:scale-105">Assign</button>
+    </form>
+</div>
+<style>
+    form p { margin-bottom: 14px; }
+    form select {
+        width: 100%;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.5rem;
+        padding: 0.55rem 0.75rem;
+        margin-top: 0.25rem;
+    }
+    form select:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px #6366f1;
+    }
+</style>
+{% endblock %}

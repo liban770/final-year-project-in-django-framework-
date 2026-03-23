@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mx-auto max-w-4xl rounded-2xl bg-white p-6 shadow-lg">
+    <h2 class="mb-1 text-2xl font-bold">Chapter Upload</h2>
+    <p class="mb-6 text-sm text-slate-600">Upload chapters in PDF, DOC, or DOCX format.</p>
+    <form method="post" enctype="multipart/form-data" class="space-y-4">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50 p-4 text-sm text-indigo-700">
+            Drag and drop is supported by your browser, or click to choose a file.
+        </div>
+        <button type="submit" class="rounded-lg bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 px-5 py-2 text-sm font-medium text-white shadow-lg transition-all duration-300 hover:scale-105">Submit Chapter</button>
+    </form>
+</div>
+<style>
+    form p { margin-bottom: 14px; }
+    form input[type="text"], form input[type="file"] {
+        width: 100%;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.5rem;
+        padding: 0.55rem 0.75rem;
+        margin-top: 0.25rem;
+        background: white;
+    }
+    form input:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px #6366f1;
+    }
+</style>
+{% endblock %}
