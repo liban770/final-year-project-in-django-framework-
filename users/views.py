@@ -7,6 +7,7 @@ from django.views import View
 from django.views.generic import CreateView, TemplateView, UpdateView
 
 from projects.models import Chapter, Notification, Project, SupervisorAssignment
+from projects.forms import ContactMessageForm
 
 from .forms import AppUserCreationForm, AppUserUpdateForm
 from .mixins import AdminRequiredMixin, StudentRequiredMixin
@@ -144,3 +145,36 @@ def role_redirect_view(request):
     if not request.user.is_authenticated:
         return redirect("users:login")
     return redirect("users:dashboard")
+
+
+class HomePageView(TemplateView):
+    template_name = "users/home.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return redirect("users:dashboard")
+        return super().dispatch(request, *args, **kwargs)
+
+
+class AboutPageView(TemplateView):
+    template_name = "users/about.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return redirect("users:dashboard")
+        return super().dispatch(request, *args, **kwargs)
+
+
+class ContactPageView(CreateView):
+    template_name = "users/contact.html"
+    form_class = ContactMessageForm
+    success_url = reverse_lazy("users:contact")
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return redirect("users:dashboard")
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        messages.success(self.request, "Thank you for your message! We'll get back to you soon.")
+        return super().form_valid(form)

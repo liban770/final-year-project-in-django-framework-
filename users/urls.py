@@ -1,10 +1,13 @@
 from django.urls import path
 
 from .views import (
+    AboutPageView,
     AdminUserDeleteView,
     AdminUserListView,
     AdminUserUpdateView,
+    ContactPageView,
     DashboardView,
+    HomePageView,
     NotificationClearAllView,
     NotificationDeleteView,
     NotificationMarkReadView,
@@ -17,7 +20,7 @@ from .views import (
 app_name = "users"
 
 urlpatterns = [
-    path("", role_redirect_view, name="home"),
+    path("", HomePageView.as_view(), name="home"),
     path("login/", UserLoginView.as_view(), name="login"),
     path("logout/", UserLogoutView.as_view(), name="logout"),
     path("dashboard/", DashboardView.as_view(), name="dashboard"),
@@ -28,4 +31,6 @@ urlpatterns = [
     path("notifications/<int:pk>/read/", NotificationMarkReadView.as_view(), name="notification-read"),
     path("notifications/<int:pk>/delete/", NotificationDeleteView.as_view(), name="notification-delete"),
     path("notifications/clear/", NotificationClearAllView.as_view(), name="notification-clear"),
+    path("about/", AboutPageView.as_view(), name="about"),
+    path("contact/", ContactPageView.as_view(), name="contact"),
 ]

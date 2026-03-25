@@ -29,13 +29,32 @@ class Project(models.Model):
         related_name="project",
         limit_choices_to={"role": "STUDENT"},
     )
-    title = models.CharField(max_length=255)
-    description = models.TextField()
+    project_title = models.CharField(max_length=255, help_text="Title of the final year project")
+    description = models.TextField(help_text="Detailed description of the project")
+    leader = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="led_projects",
+        limit_choices_to={"role": "STUDENT"},
+        help_text="Project leader (can be different from the submitting student)"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.title} ({self.student.username})"
+        return f"{self.project_title} (Leader: {self.leader.username})"
+
+
+class GroupMember(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="group_members")
+    name = models.CharField(max_length=255, help_text="Full name of the group member")
+    email = models.EmailField(blank=True, help_text="Email address of the group member (optional)")
+
+    class Meta:
+        unique_together = ['project', 'name']
+
+    def __str__(self):
+        return f"{self.name} ({self.project.project_title})"
 
 
 class Chapter(models.Model):
@@ -92,3 +111,13 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"To {self.user.username}: {self.message}"
+
+
+class ContactMessage(models.Model):
+    name = models.CharField(max_length=255)
+    email = models.EmailField()
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Message from {self.name} ({self.email})"

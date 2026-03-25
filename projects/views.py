@@ -13,8 +13,8 @@ from django.views.generic import CreateView, FormView, ListView, TemplateView, U
 from users.mixins import AdminRequiredMixin, StudentRequiredMixin, SupervisorRequiredMixin
 from users.models import User
 
-from .forms import ChapterForm, FeedbackForm, ProjectForm, SupervisorAssignmentForm
-from .models import Chapter, Feedback, Notification, Project, SupervisorAssignment
+from .forms import ChapterForm, FeedbackForm, ProjectForm, SupervisorAssignmentForm, GroupMemberForm, ContactMessageForm
+from .models import Chapter, Feedback, Notification, Project, SupervisorAssignment, GroupMember, ContactMessage
 
 
 class ProjectCreateUpdateView(StudentRequiredMixin, FormView):
@@ -22,14 +22,44 @@ class ProjectCreateUpdateView(StudentRequiredMixin, FormView):
     form_class = ProjectForm
     success_url = reverse_lazy("projects:student-project")
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        project = Project.objects.filter(student=self.request.user).first()
+        if project:
+            context['group_members'] = project.group_members.all()
+        else:
+            context['group_members'] = []
+        context['group_member_form'] = GroupMemberForm()
+        return context
+
     def form_valid(self, form):
-        project, _ = Project.objects.get_or_create(
+        project, created = Project.objects.get_or_create(
             student=self.request.user,
-            defaults={"title": "", "description": ""},
+            defaults={
+                "project_title": "",
+                "description": "",
+                "leader": self.request.user
+            },
         )
-        project.title = form.cleaned_data["title"]
+        project.project_title = form.cleaned_data["project_title"]
         project.description = form.cleaned_data["description"]
-        project.save(update_fields=["title", "description"])
+        project.leader = form.cleaned_data["leader"]
+        project.save(update_fields=["project_title", "description", "leader"])
+
+        # Handle group members from POST data
+        member_names = self.request.POST.getlist('member_name[]')
+        member_emails = self.request.POST.getlist('member_email[]')
+
+        # Clear existing members and add new ones
+        project.group_members.all().delete()  # Clear existing members
+
+        for name, email in zip(member_names, member_emails):
+            if name.strip():  # Only add if name is not empty
+                GroupMember.objects.create(
+                    project=project,
+                    name=name.strip(),
+                    email=email.strip() if email.strip() else ""
+                )
 
         assignment = SupervisorAssignment.objects.filter(student=self.request.user).first()
         if assignment:
@@ -38,7 +68,6 @@ class ProjectCreateUpdateView(StudentRequiredMixin, FormView):
                 message=f"{self.request.user.username} submitted project details.",
             )
         messages.success(self.request, "Project details saved successfully.")
-        # Important: Redirect back to the form so the browser gets a fresh/blank form.
         return redirect(self.success_url)
 
 
@@ -110,7 +139,9 @@ class SupervisorStudentListView(SupervisorRequiredMixin, ListView):
     context_object_name = "assignments"
 
     def get_queryset(self):
-        return SupervisorAssignment.objects.filter(supervisor=self.request.user).select_related("student")
+        return SupervisorAssignment.objects.filter(
+            supervisor=self.request.user
+        ).select_related("student").prefetch_related("student__project__group_members")
 
 
 class SupervisorChapterReviewListView(SupervisorRequiredMixin, ListView):
@@ -213,7 +244,7 @@ class ProjectListView(AdminRequiredMixin, ListView):
     context_object_name = "projects"
 
     def get_queryset(self):
-        return Project.objects.select_related("student").order_by("-updated_at")
+        return Project.objects.select_related("student", "leader").prefetch_related("group_members").order_by("-updated_at")
 
 
 class GlobalSearchView(LoginRequiredMixin, TemplateView):

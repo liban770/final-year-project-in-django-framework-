@@ -1,0 +1,49 @@
+<header class="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+            <!-- Logo -->
+            <div class="flex items-center">
+                <a href="{% url 'users:home' %}" class="text-xl font-bold text-indigo-700 hover:text-indigo-800 transition duration-200">
+                    FYPMS
+                </a>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="hidden md:flex items-center space-x-8">
+                <a href="{% url 'users:home' %}" class="text-gray-700 hover:text-indigo-600 font-medium transition duration-200">Home</a>
+                <a href="{% url 'users:about' %}" class="text-gray-700 hover:text-indigo-600 font-medium transition duration-200">About</a>
+                <a href="{% url 'users:contact' %}" class="text-gray-700 hover:text-indigo-600 font-medium transition duration-200">Contact</a>
+            </nav>
+
+            <!-- Login Button -->
+            <div class="flex items-center space-x-4">
+                <a href="{% url 'users:login' %}" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 transition duration-200 shadow-md">
+                    Login
+                </a>
+
+                <!-- Mobile menu button -->
+                <button type="button" onclick="toggleMobileMenu()" class="md:hidden rounded-lg border border-slate-300 p-2">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Navigation Menu -->
+        <div id="mobileMenu" class="hidden md:hidden border-t border-slate-200 bg-white">
+            <nav class="px-4 py-4 space-y-2">
+                <a href="{% url 'users:home' %}" class="block px-3 py-2 text-gray-700 hover:text-indigo-600 font-medium rounded-lg hover:bg-gray-50 transition duration-200">Home</a>
+                <a href="{% url 'users:about' %}" class="block px-3 py-2 text-gray-700 hover:text-indigo-600 font-medium rounded-lg hover:bg-gray-50 transition duration-200">About</a>
+                <a href="{% url 'users:contact' %}" class="block px-3 py-2 text-gray-700 hover:text-indigo-600 font-medium rounded-lg hover:bg-gray-50 transition duration-200">Contact</a>
+            </nav>
+        </div>
+    </div>
+</header>
+
+<script>
+function toggleMobileMenu() {
+    const menu = document.getElementById("mobileMenu");
+    if (menu) menu.classList.toggle("hidden");
+}
+</script>
