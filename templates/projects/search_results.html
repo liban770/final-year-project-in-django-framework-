@@ -1,11 +1,37 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="mx-auto max-w-6xl">
-    <div class="mb-5">
-        <h2 class="text-2xl font-bold text-slate-900">Search</h2>
-        <p class="text-sm text-slate-600">
-            {% if query %}Showing results for <span class="font-semibold">{{ query }}</span>.{% else %}Type a keyword in the navbar search.{% endif %}
-        </p>
+    <div class="mb-5 space-y-2">
+        <h2 class="text-2xl font-bold text-slate-900">Search Projects</h2>
+        <p class="text-sm text-slate-600">Search by project title or student name, then filter by chapter status.</p>
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-[1fr_auto] mb-6">
+        <form method="get" class="grid gap-4 sm:grid-cols-[1fr_auto]">
+            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                <label for="searchQuery" class="sr-only">Search</label>
+                <input
+                    id="searchQuery"
+                    name="q"
+                    type="text"
+                    value="{{ query }}"
+                    placeholder="Project title or student name"
+                    class="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                />
+            </div>
+            <div class="flex items-center gap-3">
+                <select name="status" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="" {% if not status %}selected{% endif %}>All statuses</option>
+                    <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>Pending</option>
+                    <option value="REVIEWED" {% if status == "REVIEWED" %}selected{% endif %}>Reviewed</option>
+                    <option value="APPROVED" {% if status == "APPROVED" %}selected{% endif %}>Approved</option>
+                    <option value="REJECTED" {% if status == "REJECTED" %}selected{% endif %}>Rejected</option>
+                </select>
+                <button type="submit" class="rounded-2xl bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:scale-[1.01]">
+                    Filter
+                </button>
+            </div>
+        </form>
     </div>
 
     {% if query %}
@@ -23,7 +49,7 @@
                             </thead>
                             <tbody>
                                 {% for s in students %}
-                                    <tr class="border-b odd:bg-white even:bg-slate-50">
+                                    <tr class="border-b odd:bg-white even:bg-slate-50 hover:bg-indigo-50">
                                         <td class="px-4 py-3 font-medium text-slate-800">
                                             {{ s.get_full_name|default:s.username }}
                                             <span class="ml-2 text-xs font-bold text-slate-500">({{ s.username }})</span>
@@ -55,7 +81,7 @@
                         </thead>
                         <tbody>
                             {% for sup in supervisors %}
-                                <tr class="border-b odd:bg-white even:bg-slate-50">
+                                <tr class="border-b odd:bg-white even:bg-slate-50 hover:bg-indigo-50">
                                     <td class="px-4 py-3 font-medium text-slate-800">
                                         {{ sup.get_full_name|default:sup.username }}
                                         <span class="ml-2 text-xs font-bold text-slate-500">({{ sup.username }})</span>
@@ -85,10 +111,10 @@
                         </thead>
                         <tbody>
                             {% for p in projects %}
-                                <tr class="border-b odd:bg-white even:bg-slate-50">
-                                    <td class="px-4 py-3 font-medium text-slate-800">{{ p.title }}</td>
+                                <tr class="border-b odd:bg-white even:bg-slate-50 hover:bg-indigo-50">
+                                    <td class="px-4 py-3 font-medium text-slate-800">{{ p.project_title }}</td>
                                     <td class="px-4 py-3">{{ p.student.username }}</td>
-                                    <td class="px-4 py-3">{{ p.updated_at }}</td>
+                                    <td class="px-4 py-3">{{ p.updated_at|date:"M d, Y H:i" }}</td>
                                 </tr>
                             {% empty %}
                                 <tr>

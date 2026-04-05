@@ -1,30 +1,43 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="mx-auto max-w-4xl rounded-2xl bg-white p-6 shadow-lg">
-    <h2 class="mb-1 text-2xl font-bold">Chapter Upload</h2>
-    <p class="mb-6 text-sm text-slate-600">Upload chapters in PDF, DOC, or DOCX format.</p>
-    <form method="post" enctype="multipart/form-data" class="space-y-4">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <div class="rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50 p-4 text-sm text-indigo-700">
-            Drag and drop is supported by your browser, or click to choose a file.
-        </div>
-        <button type="submit" class="rounded-lg bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 px-5 py-2 text-sm font-medium text-white shadow-lg transition-all duration-300 hover:scale-105">Submit Chapter</button>
-    </form>
+<div class="mx-auto max-w-4xl">
+    <div class="mb-8">
+        <h2 class="text-2xl font-semibold text-gray-800">Chapter upload</h2>
+        <p class="text-sm text-gray-600">PDF, DOC, or DOCX — keep filenames clear for your supervisor.</p>
+    </div>
+
+    <div class="rounded-2xl border border-gray-100/80 bg-white p-8 shadow-md transition-all duration-200 hover:shadow-xl">
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <div class="rounded-2xl border-2 border-dashed border-indigo-200 bg-gradient-to-br from-indigo-50/80 to-purple-50/50 p-6 text-center text-sm text-indigo-800 transition-all duration-200 hover:border-indigo-300">
+                <p class="font-medium">Drop a file here or use the file field above.</p>
+                <p class="mt-1 text-xs text-indigo-600/80">Accepted: PDF, DOC, DOCX</p>
+            </div>
+            <button type="submit" class="w-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 py-3.5 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:shadow-xl">
+                Submit chapter
+            </button>
+        </form>
+    </div>
 </div>
 <style>
-    form p { margin-bottom: 14px; }
+    form p { margin-bottom: 1rem; }
+    form label { display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.35rem; }
     form input[type="text"], form input[type="file"] {
         width: 100%;
-        border: 1px solid #cbd5e1;
-        border-radius: 0.5rem;
-        padding: 0.55rem 0.75rem;
-        margin-top: 0.25rem;
-        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 1rem;
+        padding: 0.65rem 1rem;
+        margin-top: 0.15rem;
+        background: #f9fafb;
+        font-size: 0.875rem;
+        transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
     }
     form input:focus {
         outline: none;
-        box-shadow: 0 0 0 2px #6366f1;
+        border-color: #a5b4fc;
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
     }
 </style>
 {% endblock %}

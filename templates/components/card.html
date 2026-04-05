@@ -1,0 +1,21 @@
+<article class="relative overflow-hidden rounded-2xl border border-gray-100/80 p-6 shadow-md transition-all duration-200 hover:shadow-xl {% if gradient %}bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-0 shadow-lg{% else %}bg-white{% endif %} {{ extra_class|default:'' }}">
+    {% if card_title %}
+    <h3 class="text-base font-semibold {% if gradient %}text-white{% else %}text-gray-800{% endif %}">{{ card_title }}</h3>
+    {% endif %}
+    {% if card_subtitle %}
+    <p class="mt-1 text-sm {% if gradient %}text-indigo-100{% else %}text-gray-400{% endif %}">{{ card_subtitle }}</p>
+    {% endif %}
+
+    {% if gradient %}
+        {% if card_hint %}
+        <p class="mt-4 text-sm text-indigo-100">{{ card_hint }}</p>
+        {% endif %}
+    {% else %}
+        {% if show_value %}
+        <p class="mt-4 text-3xl font-bold tabular-nums text-gray-800">{{ card_value }}</p>
+        {% endif %}
+        {% if card_hint %}
+        <p class="mt-2 text-sm text-gray-600">{{ card_hint }}</p>
+        {% endif %}
+    {% endif %}
+</article>

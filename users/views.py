@@ -1,12 +1,13 @@
 from django.contrib import messages
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import CreateView, TemplateView, UpdateView
 
-from projects.models import Chapter, Notification, Project, SupervisorAssignment
+from projects.models import ActivityLog, Chapter, Notification, Project, SupervisorAssignment
 from projects.forms import ContactMessageForm
 
 from .forms import AppUserCreationForm, AppUserUpdateForm
@@ -31,12 +32,17 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         user = self.request.user
 
         if user.role == User.Role.ADMIN:
+            chapters = Chapter.objects.all()
             context.update(
                 {
                     "total_students": User.objects.filter(role=User.Role.STUDENT).count(),
                     "total_supervisors": User.objects.filter(role=User.Role.SUPERVISOR).count(),
                     "total_projects": Project.objects.count(),
+                    "pending_reviews": chapters.filter(status=Chapter.Status.PENDING).count(),
+                    "approved_chapters": chapters.filter(status=Chapter.Status.APPROVED).count(),
+                    "notifications_count": user.notifications.count(),
                     "recent_projects": Project.objects.select_related("student").order_by("-updated_at")[:5],
+                    "recent_activities": ActivityLog.objects.select_related("user", "project").order_by("-created_at")[:6],
                 }
             )
         elif user.role == User.Role.SUPERVISOR:
@@ -49,19 +55,42 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 {
                     "assigned_students": assignments,
                     "chapter_count": chapters.count(),
+                    "total_projects": chapters.values("project_id").distinct().count(),
                     "pending_reviews": chapters.filter(status=Chapter.Status.PENDING).count(),
+                    "approved_chapters": chapters.filter(status=Chapter.Status.APPROVED).count(),
+                    "notifications_count": user.notifications.count(),
+                    "recent_activities": ActivityLog.objects.filter(
+                        Q(user=user) | Q(project__student_id__in=student_ids)
+                    )
+                    .select_related("user", "project")
+                    .order_by("-created_at")[:6],
                 }
             )
         else:
             project = Project.objects.filter(student=user).first()
             chapters = Chapter.objects.filter(project=project) if project else Chapter.objects.none()
+            chapter_count = chapters.count()
+            expected_chapters = 5
+            progress_percent = min(100, int((chapter_count / expected_chapters) * 100)) if expected_chapters else 0
             context.update(
                 {
                     "project": project,
                     "chapters": chapters.order_by("-submission_date"),
+                    "total_projects": 1 if project else 0,
                     "pending": chapters.filter(status=Chapter.Status.PENDING).count(),
                     "reviewed": chapters.filter(status=Chapter.Status.REVIEWED).count(),
                     "approved": chapters.filter(status=Chapter.Status.APPROVED).count(),
+                    "approved_chapters": chapters.filter(status=Chapter.Status.APPROVED).count(),
+                    "notifications_count": user.notifications.count(),
+                    "chapter_count": chapter_count,
+                    "expected_chapters": expected_chapters,
+                    "progress_percent": progress_percent,
+                    "progress_text": f"{chapter_count}/{expected_chapters}",
+                    "recent_activities": ActivityLog.objects.filter(
+                        Q(user=user) | Q(project__student=user)
+                    )
+                    .select_related("project")
+                    .order_by("-created_at")[:6],
                 }
             )
 
@@ -111,7 +140,7 @@ class AdminUserDeleteView(AdminRequiredMixin, View):
         return redirect("users:user-list")
 
 
-class NotificationMarkReadView(StudentRequiredMixin, View):
+class NotificationMarkReadView(LoginRequiredMixin, View):
     def post(self, request, pk, *args, **kwargs):
         notification = get_object_or_404(Notification, pk=pk, user=request.user)
         if not notification.is_read:
@@ -120,7 +149,7 @@ class NotificationMarkReadView(StudentRequiredMixin, View):
         return redirect("users:dashboard")
 
 
-class NotificationDeleteView(StudentRequiredMixin, View):
+class NotificationDeleteView(LoginRequiredMixin, View):
     def post(self, request, pk, *args, **kwargs):
         if request.POST.get("confirm") != "yes":
             messages.error(request, "Deletion confirmation missing.")
@@ -131,7 +160,7 @@ class NotificationDeleteView(StudentRequiredMixin, View):
         return redirect("users:dashboard")
 
 
-class NotificationClearAllView(StudentRequiredMixin, View):
+class NotificationClearAllView(LoginRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         if request.POST.get("confirm") != "yes":
             messages.error(request, "Deletion confirmation missing.")

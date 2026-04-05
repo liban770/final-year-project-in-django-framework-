@@ -14,7 +14,7 @@ from users.mixins import AdminRequiredMixin, StudentRequiredMixin, SupervisorReq
 from users.models import User
 
 from .forms import ChapterForm, FeedbackForm, ProjectForm, SupervisorAssignmentForm, GroupMemberForm, ContactMessageForm
-from .models import Chapter, Feedback, Notification, Project, SupervisorAssignment, GroupMember, ContactMessage
+from .models import ActivityLog, Chapter, Feedback, Notification, Project, SupervisorAssignment, GroupMember, ContactMessage
 
 
 class ProjectCreateUpdateView(StudentRequiredMixin, FormView):
@@ -31,6 +31,14 @@ class ProjectCreateUpdateView(StudentRequiredMixin, FormView):
             context['group_members'] = []
         context['group_member_form'] = GroupMemberForm()
         return context
+
+    def get_form(self, form_class=None):
+        form_class = form_class or self.get_form_class()
+        kwargs = self.get_form_kwargs()
+        project = Project.objects.filter(student=self.request.user).first()
+        if project:
+            kwargs['instance'] = project
+        return form_class(**kwargs)
 
     def form_valid(self, form):
         project, created = Project.objects.get_or_create(
@@ -67,6 +75,15 @@ class ProjectCreateUpdateView(StudentRequiredMixin, FormView):
                 user=assignment.supervisor,
                 message=f"{self.request.user.username} submitted project details.",
             )
+
+        ActivityLog.objects.create(
+            user=self.request.user,
+            project=project,
+            message=(
+                f"{self.request.user.username} {'created' if created else 'updated'} project details for '{project.project_title}'."
+            ),
+        )
+
         messages.success(self.request, "Project details saved successfully.")
         return redirect(self.success_url)
 
@@ -108,6 +125,13 @@ class ChapterCreateView(StudentRequiredMixin, CreateView):
                 user=assignment.supervisor,
                 message=f"New chapter submitted: {form.instance.title} by {self.request.user.username}.",
             )
+
+        ActivityLog.objects.create(
+            user=self.request.user,
+            project=self.project,
+            message=f"{self.request.user.username} submitted chapter '{form.instance.title}'.",
+        )
+
         messages.success(self.request, "Chapter submitted successfully.")
         return response
 
@@ -130,6 +154,13 @@ class ChapterUpdateView(StudentRequiredMixin, UpdateView):
                 user=assignment.supervisor,
                 message=f"Chapter updated: {form.instance.title} by {self.request.user.username}.",
             )
+
+        ActivityLog.objects.create(
+            user=self.request.user,
+            project=form.instance.project,
+            message=f"{self.request.user.username} updated chapter '{form.instance.title}'.",
+        )
+
         messages.success(self.request, "Chapter updated successfully.")
         return response
 
@@ -205,6 +236,13 @@ class FeedbackCreateUpdateView(SupervisorRequiredMixin, CreateView):
             message_text = f"Your chapter '{self.chapter.title}' has been reviewed."
 
         Notification.objects.create(user=self.chapter.project.student, message=message_text)
+
+        ActivityLog.objects.create(
+            user=self.request.user,
+            project=self.chapter.project,
+            message=f"{self.request.user.username} reviewed chapter '{self.chapter.title}' ({status}).",
+        )
+
         messages.success(self.request, "Feedback saved successfully.")
         return HttpResponseRedirect(reverse_lazy("projects:supervisor-chapters"))
 
@@ -253,7 +291,9 @@ class GlobalSearchView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         q = (self.request.GET.get("q") or "").strip()
+        status = (self.request.GET.get("status") or "").strip().upper()
         context["query"] = q
+        context["status"] = status
         if not q:
             context["students"] = User.objects.none()
             context["supervisors"] = User.objects.none()
@@ -266,7 +306,15 @@ class GlobalSearchView(LoginRequiredMixin, TemplateView):
         supervisor_qs = User.objects.filter(role=User.Role.SUPERVISOR).filter(
             Q(username__icontains=q) | Q(email__icontains=q) | Q(first_name__icontains=q) | Q(last_name__icontains=q)
         )
-        project_qs = Project.objects.filter(title__icontains=q).select_related("student").order_by("-updated_at")
+        project_qs = Project.objects.filter(
+            Q(project_title__icontains=q)
+            | Q(student__username__icontains=q)
+            | Q(student__first_name__icontains=q)
+            | Q(student__last_name__icontains=q)
+        ).select_related("student").order_by("-updated_at")
+
+        if status in {Chapter.Status.PENDING, Chapter.Status.REVIEWED, Chapter.Status.APPROVED, Chapter.Status.REJECTED}:
+            project_qs = project_qs.filter(chapters__status=status).distinct()
 
         context["students"] = student_qs
         context["supervisors"] = supervisor_qs
@@ -469,6 +517,37 @@ class ProjectReportsExportView(View):
         return response
 
 
+class ProjectSimilarityAjaxView(LoginRequiredMixin, View):
+    """
+    Returns similar project title matches for the project submission page.
+    """
+
+    def get(self, request, *args, **kwargs):
+        q = (request.GET.get("q") or "").strip()
+        if not q:
+            return JsonResponse({"similar_titles": []})
+
+        keywords = [word for word in q.split() if len(word) >= 3]
+        if not keywords:
+            return JsonResponse({"similar_titles": []})
+
+        query = Q()
+        for term in keywords:
+            query |= Q(project_title__icontains=term)
+
+        similar_projects = (
+            Project.objects.filter(query)
+            .exclude(project_title__iexact=q)
+            .order_by("project_title")[:5]
+        )
+
+        return JsonResponse(
+            {
+                "similar_titles": [p.project_title for p in similar_projects]
+            }
+        )
+
+
 class SearchSuggestionsAjaxView(LoginRequiredMixin, View):
     """
     Returns lightweight search suggestions for the navbar (AJAX).
@@ -501,7 +580,7 @@ class SearchSuggestionsAjaxView(LoginRequiredMixin, View):
             .order_by("username")[:6]
         )
 
-        projects_qs = Project.objects.filter(title__icontains=q).select_related("student").order_by("-updated_at")[:6]
+        projects_qs = Project.objects.filter(project_title__icontains=q).select_related("student").order_by("-updated_at")[:6]
 
         return JsonResponse(
             {
@@ -526,7 +605,7 @@ class SearchSuggestionsAjaxView(LoginRequiredMixin, View):
                 "projects": [
                     {
                         "id": p.id,
-                        "title": p.title,
+                        "title": p.project_title,
                         "student": p.student.username,
                         "updated_at": p.updated_at.isoformat(),
                     }

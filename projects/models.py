@@ -29,8 +29,8 @@ class Project(models.Model):
         related_name="project",
         limit_choices_to={"role": "STUDENT"},
     )
-    project_title = models.CharField(max_length=255, help_text="Title of the final year project")
-    description = models.TextField(help_text="Detailed description of the project")
+    project_title = models.CharField(max_length=255, blank=True, default="", help_text="Title of the final year project")
+    description = models.TextField(blank=True, default="", help_text="Detailed description of the project")
     leader = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -111,6 +111,31 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"To {self.user.username}: {self.message}"
+
+
+class ActivityLog(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="activity_logs",
+    )
+    project = models.ForeignKey(
+        Project,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="activity_logs",
+    )
+    message = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.message
 
 
 class ContactMessage(models.Model):

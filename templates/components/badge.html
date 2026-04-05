@@ -1,0 +1,11 @@
+{% if status == "PENDING" %}
+<span class="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-200/60">Pending</span>
+{% elif status == "APPROVED" %}
+<span class="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-200/60">Approved</span>
+{% elif status == "REVIEWED" %}
+<span class="inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-800 ring-1 ring-inset ring-indigo-200/60">Reviewed</span>
+{% elif status == "REJECTED" %}
+<span class="inline-flex items-center rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-800 ring-1 ring-inset ring-rose-200/60">Rejected</span>
+{% else %}
+<span class="inline-flex items-center rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-800 ring-1 ring-inset ring-rose-200/60">{{ status|default:"Unknown" }}</span>
+{% endif %}

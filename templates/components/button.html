@@ -1,0 +1,15 @@
+{% if href %}
+<a
+    href="{{ href }}"
+    class="inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:shadow-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 {{ extra_class|default:'' }}"
+>
+    {{ label }}
+</a>
+{% else %}
+<button
+    type="{{ btn_type|default:'button' }}"
+    class="inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:shadow-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 {{ extra_class|default:'' }}"
+>
+    {{ label }}
+</button>
+{% endif %}
