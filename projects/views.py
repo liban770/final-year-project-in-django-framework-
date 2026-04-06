@@ -30,6 +30,7 @@ class ProjectCreateUpdateView(StudentRequiredMixin, FormView):
         else:
             context['group_members'] = []
         context['group_member_form'] = GroupMemberForm()
+        context['project'] = project
         return context
 
     def get_form(self, form_class=None):
@@ -52,7 +53,8 @@ class ProjectCreateUpdateView(StudentRequiredMixin, FormView):
         project.project_title = form.cleaned_data["project_title"]
         project.description = form.cleaned_data["description"]
         project.leader = form.cleaned_data["leader"]
-        project.save(update_fields=["project_title", "description", "leader"])
+        project.status = Project.Status.PENDING
+        project.save(update_fields=["project_title", "description", "leader", "status"])
 
         # Handle group members from POST data
         member_names = self.request.POST.getlist('member_name[]')
@@ -283,6 +285,32 @@ class ProjectListView(AdminRequiredMixin, ListView):
 
     def get_queryset(self):
         return Project.objects.select_related("student", "leader").prefetch_related("group_members").order_by("-updated_at")
+
+
+class ProjectStatusUpdateView(AdminRequiredMixin, View):
+    def post(self, request, pk, action, *args, **kwargs):
+        project = get_object_or_404(Project, pk=pk)
+        if action == "approve":
+            project.status = Project.Status.APPROVED
+            message_text = f"Your project '{project.project_title}' has been approved."
+            success_message = "Project approved successfully."
+        elif action == "reject":
+            project.status = Project.Status.REJECTED
+            message_text = f"Your project '{project.project_title}' has been rejected. Please revise and resubmit."
+            success_message = "Project rejected successfully."
+        else:
+            messages.error(request, "Invalid project action.")
+            return redirect("projects:project-list")
+
+        project.save(update_fields=["status"])
+        Notification.objects.create(user=project.student, message=message_text)
+        ActivityLog.objects.create(
+            user=request.user,
+            project=project,
+            message=f"{request.user.username} {action}d project '{project.project_title}'.",
+        )
+        messages.success(request, success_message)
+        return redirect("projects:project-list")
 
 
 class GlobalSearchView(LoginRequiredMixin, TemplateView):

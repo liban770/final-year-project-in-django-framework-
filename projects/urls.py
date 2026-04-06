@@ -16,6 +16,7 @@ from .views import (
     SupervisorAssignmentCreateView,
     SupervisorChapterReviewListView,
     SupervisorStudentListView,
+    ProjectStatusUpdateView,
 )
 
 app_name = "projects"
@@ -33,6 +34,7 @@ urlpatterns = [
     path("supervisor/chapters/", SupervisorChapterReviewListView.as_view(), name="supervisor-chapters"),
     path("supervisor/chapter/<int:pk>/feedback/", FeedbackCreateUpdateView.as_view(), name="feedback-create"),
     path("admin/assign-supervisor/", SupervisorAssignmentCreateView.as_view(), name="assign-supervisor"),
+    path("admin/project/<int:pk>/<str:action>/", ProjectStatusUpdateView.as_view(), name="project-status-update"),
     path("admin/projects/", ProjectListView.as_view(), name="project-list"),
     path("reports/", ProjectReportsView.as_view(), name="reports"),
     path("reports/export/", ProjectReportsExportView.as_view(), name="reports-export"),

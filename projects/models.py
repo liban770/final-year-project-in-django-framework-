@@ -23,6 +23,11 @@ class SupervisorAssignment(models.Model):
 
 
 class Project(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        APPROVED = "APPROVED", "Approved"
+        REJECTED = "REJECTED", "Rejected"
+
     student = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -37,6 +42,11 @@ class Project(models.Model):
         related_name="led_projects",
         limit_choices_to={"role": "STUDENT"},
         help_text="Project leader (can be different from the submitting student)"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
