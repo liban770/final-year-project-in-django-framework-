@@ -22,6 +22,48 @@ class SupervisorAssignment(models.Model):
         return f"{self.student.username} -> {self.supervisor.username}"
 
 
+class Attendance(models.Model):
+    class Status(models.TextChoices):
+        PRESENT = "PRESENT", "Present"
+        ABSENT = "ABSENT", "Absent"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="attendances",
+    )
+    group_member = models.ForeignKey(
+        "GroupMember",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="attendances",
+    )
+    taken_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="attendance_records",
+    )
+    date = models.DateField()
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PRESENT,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("user", "date"), ("group_member", "date")]
+        ordering = ["-date"]
+
+    def __str__(self):
+        target = self.user.username if self.user else self.group_member.name if self.group_member else "Unknown"
+        return f"{self.date} {target} - {self.status}"
+
+
 class Project(models.Model):
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"

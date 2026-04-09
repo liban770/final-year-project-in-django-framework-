@@ -1,6 +1,8 @@
 import csv
 from io import StringIO
 
+from datetime import date
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count, Q
@@ -14,7 +16,7 @@ from users.mixins import AdminRequiredMixin, StudentRequiredMixin, SupervisorReq
 from users.models import User
 
 from .forms import ChapterForm, FeedbackForm, ProjectForm, SupervisorAssignmentForm, GroupMemberForm, ContactMessageForm
-from .models import ActivityLog, Chapter, Feedback, Notification, Project, SupervisorAssignment, GroupMember, ContactMessage
+from .models import ActivityLog, Attendance, Chapter, Feedback, Notification, Project, SupervisorAssignment, GroupMember, ContactMessage
 
 
 class ProjectCreateUpdateView(StudentRequiredMixin, FormView):
@@ -188,6 +190,154 @@ class SupervisorChapterReviewListView(SupervisorRequiredMixin, ListView):
             .select_related("project", "project__student", "feedback")
             .order_by("-submission_date")
         )
+
+
+class AdminSupervisorAttendanceView(AdminRequiredMixin, TemplateView):
+    template_name = "projects/admin_attendance.html"
+
+    def _get_date(self):
+        date_value = self.request.POST.get("date") or self.request.GET.get("date")
+        if not date_value:
+            return date.today()
+        try:
+            return date.fromisoformat(date_value)
+        except ValueError:
+            return date.today()
+
+    def _attendance_by_user(self, attendance_date, users):
+        attendances = Attendance.objects.filter(date=attendance_date, user__in=users).select_related("user")
+        return {attendance.user_id: attendance for attendance in attendances}
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        attendance_date = self._get_date()
+        supervisors = User.objects.filter(role=User.Role.SUPERVISOR).order_by("username")
+        attendance_by_user = self._attendance_by_user(attendance_date, supervisors)
+        context["attendance_date"] = attendance_date
+        context["attendance_rows"] = [
+            {"supervisor": supervisor, "attendance": attendance_by_user.get(supervisor.id)}
+            for supervisor in supervisors
+        ]
+        context["recent_attendances"] = Attendance.objects.filter(
+            user__role=User.Role.SUPERVISOR
+        ).select_related("user", "taken_by").order_by("-date", "user__username")[:20]
+        return context
+
+    def post(self, request, *args, **kwargs):
+        attendance_date = self._get_date()
+        supervisors = User.objects.filter(role=User.Role.SUPERVISOR)
+        for supervisor in supervisors:
+            status = request.POST.get(f"status_{supervisor.id}", Attendance.Status.ABSENT)
+            if status not in {Attendance.Status.PRESENT, Attendance.Status.ABSENT}:
+                status = Attendance.Status.ABSENT
+            Attendance.objects.update_or_create(
+                user=supervisor,
+                date=attendance_date,
+                defaults={
+                    "status": status,
+                    "taken_by": request.user,
+                },
+            )
+        messages.success(request, "Supervisor attendance has been recorded.")
+        return redirect(f"{reverse_lazy('projects:admin-attendance')}?date={attendance_date.isoformat()}")
+
+
+class SupervisorStudentAttendanceView(SupervisorRequiredMixin, TemplateView):
+    template_name = "projects/supervisor_attendance.html"
+
+    def _get_date(self):
+        date_value = self.request.POST.get("date") or self.request.GET.get("date")
+        if not date_value:
+            return date.today()
+        try:
+            return date.fromisoformat(date_value)
+        except ValueError:
+            return date.today()
+
+    def _attendance_by_user(self, attendance_date, users):
+        attendances = Attendance.objects.filter(date=attendance_date, user__in=users).select_related("user")
+        return {attendance.user_id: attendance for attendance in attendances}
+
+    def _attendance_by_group_member(self, attendance_date, members):
+        attendances = Attendance.objects.filter(date=attendance_date, group_member__in=members).select_related("group_member")
+        return {attendance.group_member_id: attendance for attendance in attendances}
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        attendance_date = self._get_date()
+        assignments = SupervisorAssignment.objects.filter(
+            supervisor=self.request.user
+        ).select_related("student", "student__project").prefetch_related("student__project__group_members").order_by("student__username")
+
+        students = [assignment.student for assignment in assignments]
+        group_members = []
+        for assignment in assignments:
+            if assignment.student.project:
+                group_members.extend(list(assignment.student.project.group_members.all()))
+
+        attendance_by_user = self._attendance_by_user(attendance_date, students)
+        attendance_by_group_member = self._attendance_by_group_member(attendance_date, group_members)
+
+        rows = []
+        for assignment in assignments:
+            student = assignment.student
+            rows.append({
+                "type": "student",
+                "student": student,
+                "attendance": attendance_by_user.get(student.id),
+            })
+            if assignment.student.project:
+                for member in assignment.student.project.group_members.all():
+                    rows.append({
+                        "type": "group_member",
+                        "group_member": member,
+                        "attendance": attendance_by_group_member.get(member.id),
+                    })
+
+        history_qs = Attendance.objects.filter(
+            Q(user__in=students) | Q(group_member__in=group_members)
+        ).select_related("user", "group_member", "taken_by").order_by("-date", "user__username", "group_member__name")[:20]
+
+        context["attendance_date"] = attendance_date
+        context["attendance_rows"] = rows
+        context["attendance_history"] = history_qs
+        return context
+
+    def post(self, request, *args, **kwargs):
+        attendance_date = self._get_date()
+        assignments = SupervisorAssignment.objects.filter(
+            supervisor=self.request.user
+        ).select_related("student", "student__project").prefetch_related("student__project__group_members")
+
+        for assignment in assignments:
+            student = assignment.student
+            status = request.POST.get(f"status_student_{student.id}", Attendance.Status.ABSENT)
+            if status not in {Attendance.Status.PRESENT, Attendance.Status.ABSENT}:
+                status = Attendance.Status.ABSENT
+            Attendance.objects.update_or_create(
+                user=student,
+                date=attendance_date,
+                defaults={
+                    "status": status,
+                    "taken_by": request.user,
+                },
+            )
+            if student.project:
+                for member in student.project.group_members.all():
+                    status = request.POST.get(f"status_group_{member.id}", Attendance.Status.ABSENT)
+                    if status not in {Attendance.Status.PRESENT, Attendance.Status.ABSENT}:
+                        status = Attendance.Status.ABSENT
+                    Attendance.objects.update_or_create(
+                        group_member=member,
+                        date=attendance_date,
+                        defaults={
+                            "status": status,
+                            "taken_by": request.user,
+                        },
+                    )
+
+        messages.success(request, "Student attendance has been recorded.")
+        return redirect(f"{reverse_lazy('projects:supervisor-attendance')}?date={attendance_date.isoformat()}")
 
 
 class FeedbackCreateUpdateView(SupervisorRequiredMixin, CreateView):
