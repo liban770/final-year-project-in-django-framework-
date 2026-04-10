@@ -15,7 +15,7 @@ from django.views.generic import CreateView, FormView, ListView, TemplateView, U
 from users.mixins import AdminRequiredMixin, StudentRequiredMixin, SupervisorRequiredMixin
 from users.models import User
 
-from .forms import ChapterForm, FeedbackForm, ProjectForm, SupervisorAssignmentForm, GroupMemberForm, ContactMessageForm
+from .forms import ChapterForm, FeedbackForm, ProjectForm, SupervisorAssignmentForm, GroupMemberForm, ContactMessageForm, DefenseScheduleForm
 from .models import ActivityLog, Attendance, Chapter, Feedback, Notification, Project, SupervisorAssignment, GroupMember, ContactMessage
 
 
@@ -181,15 +181,30 @@ class SupervisorStudentListView(SupervisorRequiredMixin, ListView):
 
 class SupervisorChapterReviewListView(SupervisorRequiredMixin, ListView):
     template_name = "projects/supervisor_chapters.html"
-    context_object_name = "chapters"
+    context_object_name = "grouped_chapters"
 
     def get_queryset(self):
         student_ids = SupervisorAssignment.objects.filter(supervisor=self.request.user).values_list("student_id", flat=True)
         return (
             Chapter.objects.filter(project__student_id__in=student_ids)
             .select_related("project", "project__student", "feedback")
-            .order_by("-submission_date")
+            .order_by("project__student__username", "-submission_date")
         )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        chapters = self.get_queryset()
+        grouped = {}
+        for chapter in chapters:
+            student_name = chapter.project.student.username
+            if student_name not in grouped:
+                grouped[student_name] = {
+                    'project': chapter.project,
+                    'chapters': []
+                }
+            grouped[student_name]['chapters'].append(chapter)
+        context['grouped_chapters'] = grouped
+        return context
 
 
 class AdminSupervisorAttendanceView(AdminRequiredMixin, TemplateView):
@@ -364,14 +379,16 @@ class FeedbackCreateUpdateView(SupervisorRequiredMixin, CreateView):
         feedback = Feedback.objects.filter(chapter=self.chapter).first()
         if feedback:
             initial["comment"] = feedback.comment
+            initial["annotated_file"] = feedback.annotated_file
         return initial
 
     def form_valid(self, form):
-        Feedback.objects.update_or_create(
+        feedback, created = Feedback.objects.update_or_create(
             chapter=self.chapter,
             defaults={
                 "supervisor": self.request.user,
                 "comment": form.cleaned_data["comment"],
+                "annotated_file": form.cleaned_data.get("annotated_file"),
             },
         )
         status = self.request.POST.get("status", Chapter.Status.REVIEWED)
@@ -420,6 +437,11 @@ class SupervisorAssignmentCreateView(AdminRequiredMixin, CreateView):
         return form
 
     def form_valid(self, form):
+        supervisor = form.cleaned_data['supervisor']
+        current_assignments = SupervisorAssignment.objects.filter(supervisor=supervisor).count()
+        if current_assignments >= 4:
+            messages.error(self.request, f"Supervisor {supervisor.username} already has 4 students assigned. Cannot assign more.")
+            return self.form_invalid(form)
         response = super().form_valid(form)
         Notification.objects.create(
             user=form.instance.student,
@@ -461,6 +483,44 @@ class ProjectStatusUpdateView(AdminRequiredMixin, View):
         )
         messages.success(request, success_message)
         return redirect("projects:project-list")
+
+
+class DefenseScheduleView(AdminRequiredMixin, FormView):
+    form_class = DefenseScheduleForm
+    template_name = "projects/defense_form.html"
+    success_url = reverse_lazy("projects:project-list")
+
+    def dispatch(self, request, *args, **kwargs):
+        self.project = get_object_or_404(Project, pk=kwargs['pk'])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.initial['defense_date'] = self.project.defense_date
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['project'] = self.project
+        return context
+
+    def form_valid(self, form):
+        self.project.defense_date = form.cleaned_data['defense_date']
+        self.project.save(update_fields=['defense_date'])
+        if self.project.defense_date:
+            Notification.objects.create(
+                user=self.project.student,
+                message=f"Your project defense has been scheduled for {self.project.defense_date.strftime('%B %d, %Y at %I:%M %p')}."
+            )
+            ActivityLog.objects.create(
+                user=self.request.user,
+                project=self.project,
+                message=f"{self.request.user.username} scheduled defense for '{self.project.project_title}' on {self.project.defense_date}."
+            )
+            messages.success(self.request, f"Defense scheduled for {self.project.defense_date.strftime('%B %d, %Y at %I:%M %p')}.")
+        else:
+            messages.success(self.request, "Defense date cleared.")
+        return super().form_valid(form)
 
 
 class GlobalSearchView(LoginRequiredMixin, TemplateView):

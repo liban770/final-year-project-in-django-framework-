@@ -90,6 +90,7 @@ class Project(models.Model):
         choices=Status.choices,
         default=Status.PENDING,
     )
+    defense_date = models.DateTimeField(null=True, blank=True, help_text="Scheduled date and time for project defense")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -142,6 +143,13 @@ class Feedback(models.Model):
         limit_choices_to={"role": "SUPERVISOR"},
     )
     comment = models.TextField()
+    annotated_file = models.FileField(
+        upload_to="annotated_chapters/",
+        validators=[FileExtensionValidator(allowed_extensions=["pdf", "doc", "docx"])],
+        blank=True,
+        null=True,
+        help_text="Upload the annotated version of the document with comments."
+    )
     reviewed_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):

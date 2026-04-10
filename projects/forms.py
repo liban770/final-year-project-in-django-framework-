@@ -72,10 +72,20 @@ class ChapterForm(forms.ModelForm):
 class FeedbackForm(forms.ModelForm):
     class Meta:
         model = Feedback
-        fields = ["comment"]
+        fields = ["comment", "annotated_file"]
 
 
 class SupervisorAssignmentForm(forms.ModelForm):
     class Meta:
         model = SupervisorAssignment
         fields = ["student", "supervisor"]
+
+
+class DefenseScheduleForm(forms.Form):
+    defense_date = forms.DateTimeField(
+        required=False,
+        widget=forms.DateTimeInput(attrs={
+            'type': 'datetime-local',
+            'class': 'form-input'
+        }),
+    )

@@ -17,6 +17,7 @@
                     <th class="px-4 py-3 text-left">Group Members</th>
                     <th class="px-4 py-3 text-left">Description</th>
                     <th class="px-4 py-3 text-left">Status</th>
+                    <th class="px-4 py-3 text-left">Defense Date</th>
                     <th class="px-4 py-3 text-left">Last Updated</th>
                     <th class="px-4 py-3 text-left">Actions</th>
                 </tr>
@@ -42,6 +43,13 @@
                         </td>
                         <td class="px-4 py-3">{{ project.description|truncatechars:80 }}</td>
                         <td class="px-4 py-3">{% include "components/badge.html" with status=project.status only %}</td>
+                        <td class="px-4 py-3">
+                            {% if project.defense_date %}
+                                {{ project.defense_date|date:"M d, Y H:i" }}
+                            {% else %}
+                                <span class="text-gray-500">Not scheduled</span>
+                            {% endif %}
+                        </td>
                         <td class="px-4 py-3">{{ project.updated_at|date:"M d, Y H:i" }}</td>
                         <td class="px-4 py-3">
                             <div class="flex flex-wrap gap-2">
@@ -59,11 +67,14 @@
                                         Reject
                                     </button>
                                 </form>
+                                <a href="{% url 'projects:schedule-defense' project.pk %}" class="rounded-full bg-blue-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-600">
+                                    Schedule Defense
+                                </a>
                             </div>
                         </td>
                     </tr>
                 {% empty %}
-                    <tr><td colspan="6" class="px-4 py-8 text-center text-slate-500">No projects available.</td></tr>
+                    <tr><td colspan="9" class="px-4 py-8 text-center text-slate-500">No projects available.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
